@@ -444,11 +444,6 @@ export default function Strava() {
   if (!status.connected) {
     return (
       <div style={styles.fullCenter}>
-        {error && (
-          <div style={{ background: '#ef444418', border: '1px solid #ef444440', color: '#ef4444', padding: '0.75rem 1.5rem', fontSize: 12, borderRadius: 8, marginBottom: '2rem', maxWidth: 360 }}>
-            {error}
-          </div>
-        )}
         <div style={{
           background: '#0f1420',
           border: '1px solid #1a2235',
@@ -472,28 +467,24 @@ export default function Strava() {
             ACTIVITY DASHBOARD
           </div>
           <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.8, marginBottom: '2rem' }}>
-            Connect your Strava account to track runs, rides, and all your workouts in one place.
+            Не е свързано. За да свържеш Strava,<br />влез в Production Dashboard.
           </div>
-          <button onClick={connect} style={{
-            background: 'linear-gradient(135deg, #FC4C02, #ff7a45)',
-            color: '#fff',
-            border: 'none',
+          <a href="https://mel-cho.vercel.app" style={{
+            display: 'block',
+            background: '#1a2235',
+            color: '#94a3b8',
+            border: '1px solid #2d3748',
             padding: '0.9rem 2rem',
-            cursor: 'pointer',
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: '0.12em',
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: '0.1em',
             fontFamily: 'inherit',
             borderRadius: 10,
-            width: '100%',
-            boxShadow: '0 4px 20px #FC4C0240',
+            textDecoration: 'none',
             transition: 'opacity 0.15s',
-          }}
-            onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-          >
-            CONNECT WITH STRAVA
-          </button>
+          }}>
+            → MEL-CHO DASHBOARD
+          </a>
         </div>
       </div>
     );
@@ -556,7 +547,6 @@ export default function Strava() {
               }}>{m}</button>
             ))}
           </div>
-          <button onClick={disconnect} style={styles.disconnectBtn}>DISCONNECT</button>
         </div>
       </div>
 
