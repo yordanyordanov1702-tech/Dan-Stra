@@ -251,7 +251,7 @@ export default function Strava() {
     setFetching(false);
   }, []);
 
-  const connect = () => { window.location.href = `${BASE}/strava/auth`; };
+  const connect = () => { window.location.href = `${BASE}/strava/auth?from=${encodeURIComponent(window.location.origin)}`; };
   const disconnect = () => {
     fetch(`${BASE}/strava/disconnect`, { method: 'DELETE' }).then(() => {
       setStatus({ connected: false, athlete: null });
