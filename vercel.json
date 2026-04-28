@@ -1,0 +1,14 @@
+{
+  "public": true,
+  "name": "dan-stra",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://melcho.onrender.com/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
