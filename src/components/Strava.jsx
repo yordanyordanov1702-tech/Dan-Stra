@@ -215,26 +215,46 @@ function MonthWeekRows({ activities, onWeekClick }) {
 const VIEW_MODES = ['WEEK', 'MONTH'];
 const TYPE_FILTERS = ['ALL', 'Run', 'Ride', 'Swim', 'Walk', 'Hike'];
 
+const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY || 'manage';
+
 export default function Strava() {
   const [status, setStatus] = useState(null);
   const [allActivities, setAllActivities] = useState([]);
   const [fetching, setFetching] = useState(false);
   const [error, setError] = useState(null);
+  const [waking, setWaking] = useState(false);
   const [viewMode, setViewMode] = useState('WEEK');
   const [selectedWeek, setSelectedWeek] = useState(currentWeekKey());
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey());
   const [typeFilter, setTypeFilter] = useState('ALL');
 
+  const params = new URLSearchParams(window.location.search);
+  const isAdmin = params.get('manage') === ADMIN_KEY;
+
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('strava_error')) setError('Strava connection failed. Please try again.');
-    if (params.get('strava') || params.get('strava_error'))
+    const p = new URLSearchParams(window.location.search);
+    if (p.get('strava_error')) setError('Strava connection failed. Please try again.');
+    if (p.get('strava') || p.get('strava_error'))
       window.history.replaceState({}, '', window.location.pathname);
 
-    fetch(`${BASE}/strava/status`)
-      .then(r => r.json())
-      .then(d => { setStatus(d); if (d.connected) loadAllActivities(); })
-      .catch(() => setStatus({ connected: false, athlete: null }));
+    const fetchStatus = async (attempt = 1) => {
+      try {
+        const r = await fetch(`${BASE}/strava/status`);
+        const d = await r.json();
+        setWaking(false);
+        setStatus(d);
+        if (d.connected) loadAllActivities();
+      } catch {
+        if (attempt < 5) {
+          setWaking(true);
+          setTimeout(() => fetchStatus(attempt + 1), 4000);
+        } else {
+          setWaking(false);
+          setStatus({ connected: false, athlete: null });
+        }
+      }
+    };
+    fetchStatus();
   }, []);
 
   const loadAllActivities = useCallback(async () => {
@@ -259,9 +279,23 @@ export default function Strava() {
     });
   };
 
-  if (!status) return <div style={s.center}>LOADING...</div>;
+  if (!status) {
+    return (
+      <div style={s.center}>
+        {waking ? (
+          <>
+            <div style={{ marginBottom: 8 }}>WAKING UP SERVER...</div>
+            <div style={{ fontSize: 10, color: '#4a5568' }}>Render free tier needs ~30s to start</div>
+          </>
+        ) : 'LOADING...'}
+      </div>
+    );
+  }
 
   if (!status.connected) {
+    if (!isAdmin) {
+      return <div style={s.center}>NO DATA</div>;
+    }
     return (
       <div>
         <h2 style={s.heading}>STRAVA INTEGRATION</h2>
@@ -318,7 +352,7 @@ export default function Strava() {
           ))}
         </div>
 
-        <button onClick={disconnect} style={s.ghostBtn}>DISCONNECT</button>
+        {isAdmin && <button onClick={disconnect} style={s.ghostBtn}>DISCONNECT</button>}
       </div>
 
       {viewMode === 'WEEK' && (
