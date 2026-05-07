@@ -88,6 +88,7 @@ function normalise(a) {
     calories:     a.calories || 0,
     avgSpeed:     a.averageSpeed || 0,
     steps:        a.steps || null,
+    wellness:     a._wellness || null,
   };
 }
 
@@ -216,6 +217,44 @@ function WeekBarChart({ activities, monday }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ── Wellness Badge ─────────────────────────────────────────────────────────
+
+function WellnessBadge({ w }) {
+  if (!w || !w.sleepScore) return (
+    <div style={{ fontSize: 9, color: '#334155', padding: '2px 1.25rem', background: '#080c14',
+      borderLeft: '3px solid #1a2235', borderRight: '1px solid #1a2235', borderBottom: '1px solid #1a2235',
+      borderRadius: '0 0 6px 6px', marginTop: -2 }}>
+      sleep: {w ? JSON.stringify(w).slice(0,40) : 'null'}
+    </div>
+  );
+
+  const sleepColor = w.sleepScore >= 80 ? '#22c55e' : w.sleepScore >= 60 ? '#f59e0b' : w.sleepScore >= 40 ? '#f97316' : '#ef4444';
+  const sleepHrs   = w.sleepSeconds ? (w.sleepSeconds / 3600).toFixed(1) : null;
+  const deep       = w.deepSeconds  ? Math.round(w.deepSeconds / 60) : null;
+  const rem        = w.remSeconds   ? Math.round(w.remSeconds / 60) : null;
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12, padding: '0.5rem 1.25rem',
+      background: '#080c14', borderLeft: `3px solid ${sleepColor}40`,
+      borderRight: '1px solid #1a2235', borderBottom: '1px solid #1a2235',
+      borderRadius: '0 0 8px 8px', marginTop: -2,
+    }}>
+      <span style={{ fontSize: 14 }}>😴</span>
+      <span style={{ fontSize: 13, color: sleepColor, fontWeight: 800 }}>{w.sleepScore}</span>
+      <span style={{ fontSize: 9, color: '#475569', letterSpacing: '0.08em' }}>SLEEP</span>
+      {sleepHrs && <span style={{ fontSize: 10, color: '#475569' }}>{sleepHrs}h</span>}
+      {deep != null && <span style={{ fontSize: 9, color: '#334155' }}>deep {deep}m</span>}
+      {rem  != null && <span style={{ fontSize: 9, color: '#334155' }}>rem {rem}m</span>}
+      {w.sleepQuality && (
+        <span style={{ fontSize: 9, color: sleepColor, opacity: 0.6, letterSpacing: '0.06em' }}>
+          {w.sleepQuality}
+        </span>
+      )}
     </div>
   );
 }
@@ -428,12 +467,12 @@ export default function Garmin() {
     );
   }
 
-  // ── Not configured ────────────────────────────────────────────────────────
+  // ── Not connected ─────────────────────────────────────────────────────────
   if (!status.connected) {
     return (
       <div style={styles.fullCenter}>
         <div style={{ background: '#0f1420', border: '1px solid #1a2235', borderRadius: 20,
-          padding: '3rem 2.5rem', textAlign: 'center', maxWidth: 380, width: '100%' }}>
+          padding: '3rem 2.5rem', textAlign: 'center', maxWidth: 420, width: '100%' }}>
           <div style={{ width: 72, height: 72, borderRadius: 18,
             background: 'linear-gradient(135deg, #20a4f3, #60c4f7)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -446,10 +485,16 @@ export default function Garmin() {
           <div style={{ fontSize: 10, color: '#475569', letterSpacing: '0.2em', marginBottom: '1.5rem' }}>
             ACTIVITY DASHBOARD
           </div>
-          <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.8 }}>
-            {status.reason === 'no_credentials'
-              ? 'Add GARMIN_EMAIL and GARMIN_PASSWORD\nto the Render environment variables.'
-              : 'Could not connect to Garmin. Check credentials on Render.'}
+          <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.9, marginBottom: '1.5rem', textAlign: 'left',
+            background: '#0a0f1a', border: '1px solid #1a2235', borderRadius: 10, padding: '1rem 1.25rem' }}>
+            <div style={{ color: '#94a3b8', marginBottom: 8 }}>За да заредиш активностите, стартирай скрипта на твоя Mac:</div>
+            <code style={{ color: '#20a4f3', fontSize: 11, display: 'block', marginBottom: 8 }}>
+              cd ~/MelCho<br />
+              python3 garmin_cffi_login.py
+            </code>
+            <div style={{ color: '#475569', fontSize: 11 }}>
+              Скриптът влиза в Garmin Connect и синхронизира всички активности директно в базата.
+            </div>
           </div>
         </div>
       </div>
@@ -498,7 +543,12 @@ export default function Garmin() {
             <div style={{ fontSize: 10, color: '#22c55e', letterSpacing: '0.1em', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
               GARMIN CONNECTED
-              {fetching && <span style={{ color: '#f59e0b', marginLeft: 8 }}>· SYNCING...</span>}
+              {fetching && <span style={{ color: '#f59e0b', marginLeft: 8 }}>· LOADING...</span>}
+              {status.syncedAt && !fetching && (
+                <span style={{ color: '#334155', marginLeft: 8 }}>
+                  · synced {new Date(status.syncedAt * 1000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -611,7 +661,12 @@ export default function Garmin() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {filtered.map(a => <ActivityCard key={a.id} activity={a} />)}
+              {filtered.map(a => (
+                <div key={a.id}>
+                  <ActivityCard activity={a} />
+                  <WellnessBadge w={a.wellness} />
+                </div>
+              ))}
             </div>
           )}
         </>
